@@ -1,6 +1,6 @@
 import json
 from json import JSONDecodeError
-
+import time
 from dotenv import load_dotenv
 from langchain_core.output_parsers import JsonOutputParser, StrOutputParser
 from langchain_core.prompts import PromptTemplate
@@ -150,7 +150,6 @@ class ChatService:
         }}
         ```
         """
-
         prompt = PromptTemplate.from_template(prompt_template)
         chain = prompt | self.llm | self.json_parser
 
@@ -256,7 +255,9 @@ class ChatService:
 
     def chat_enhanced(self, question: str):
         print(f"\n[User Question]: {question}")
+        start = time.time()
         cypher_data = self._generate_cypher_enhanced(question)
+        print(f"cypher生成耗时：{time.time() - start}")
         if not cypher_data or "cypher_query" not in cypher_data:
             return "抱歉，我无法理解您的问题来生成一个有效的查询。"
         print(cypher_data)
@@ -266,14 +267,18 @@ class ChatService:
         print(f"[Entities to Align]: {entities_to_align}")
 
         if entities_to_align:
+            start = time.time()
             aligned_entities = self._entity_align_enhanced(entities_to_align, question)
+            print(f"检索对齐：{time.time() - start}")
             if not aligned_entities:
                 entity_names = ", ".join([f"'{e['entity']}'" for e in entities_to_align])
                 return f"抱歉，我在知识库中找不到与 {entity_names} 相关确切信息，请您换个问法试试。"
             print(f"[Aligned Entities]: {aligned_entities}")
         else:
             query_result = self.graph.query(cypher)
+            start = time.time()
             answer = self._generate_answer_enhanced(question, cypher, query_result)
+            print(f"最终生成耗时：{time.time() - start}")
             print(f"\n[Final Answer]: {answer}")
             return answer
         try:
@@ -283,7 +288,9 @@ class ChatService:
         except Exception as e:
             print(f"Error executing Cypher query: {e}")
             return "抱歉，我在查询知识库时遇到了一个问题，暂时无法回答您。"
+        start = time.time()
         answer = self._generate_answer_enhanced(question, cypher, query_result)
+        print(f"最终生成耗时：{time.time() - start}")
         print(f"\n[Final Answer]: {answer}")
         return answer
     def chat(self, question):
